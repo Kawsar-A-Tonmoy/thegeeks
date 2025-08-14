@@ -70,7 +70,6 @@ function createProductCard(p) {
 
   const card = document.createElement('div');
   card.className = 'card product-card';
-  const qtyId = `qty-${p.id}`;
 
   card.innerHTML = `
     <img src="${p.image}" alt="${p.name}" onerror="this.src=''; this.alt='Image not available';">
@@ -86,24 +85,21 @@ function createProductCard(p) {
       ৳${finalPrice.toFixed(2)} ${hasDiscount ? `(-${p.discount}%)` : ``}
     </div>
     <p class="desc">${p.description || ''}</p>
-    <div class="muted">Stock: <span>${p.stock}</span></div>
     <div class="order-row">
-      <input type="number" min="1" class="qty" id="${qtyId}" placeholder="Qty" ${isOOS ? 'disabled' : ''}>
       <button ${isOOS ? 'disabled' : ''} data-id="${p.id}" class="order-btn">Order</button>
     </div>
   `;
 
   card.querySelector('.order-btn').addEventListener('click', (e) => {
     const id = e.currentTarget.getAttribute('data-id');
-    const qty = parseInt(card.querySelector(`#${qtyId}`)?.value || '1', 10);
-    openCheckoutModal(id, qty);
+    openCheckoutModal(id);
   });
 
   return card;
 }
 
 // ====== CHECKOUT MODAL FLOW ======
-function openCheckoutModal(productId, preQty=1) {
+function openCheckoutModal(productId) {
   const p = loadProducts().find(x => x.id === productId);
   if (!p) return;
 
@@ -117,7 +113,7 @@ function openCheckoutModal(productId, preQty=1) {
   document.getElementById('co-price').value = unit.toFixed(2);
   document.getElementById('co-unit-price-raw').value = unit.toString();
   document.getElementById('co-available-stock').value = String(p.stock);
-  document.getElementById('co-qty').value = Math.max(1, Math.min(preQty || 1, Number(p.stock) || 1));
+  document.getElementById('co-qty').value = 1; // always start at 1
   document.getElementById('co-delivery').value = DELIVERY_FEE.toString();
   document.getElementById('co-payment').value = '';
   document.getElementById('co-payment-number').value = '';
@@ -196,7 +192,6 @@ async function submitCheckoutOrder(e) {
   if (!validPhone(phone)) { alert('Please enter a valid phone number.'); return; }
   if (!validEmail(email)) { alert('Please enter a valid email.'); return; }
   if (!payment) { alert('Select a payment method.'); return; }
-  // You asked to require a transaction ID for both methods:
   if (!txn) { alert('Transaction ID is required.'); return; }
 
   const order = {
@@ -226,10 +221,8 @@ async function submitCheckoutOrder(e) {
     });
     const data = await res.json().catch(()=>({status:'unknown'}));
     console.log('Google Sheets response:', data);
-    // proceed regardless; but you can enforce success if you want.
   } catch (err) {
     console.error('Google Sheets error:', err);
-    // You can alert here if you want to enforce online saving
   }
 
   // Save order locally
@@ -251,7 +244,6 @@ async function submitCheckoutOrder(e) {
 
   closeCheckoutModal();
   alert('Your order was placed successfully!');
-  // Refresh product listing if on product page
   if (document.getElementById('new-products')) displayProducts();
 }
 
@@ -323,7 +315,6 @@ function renderDataTable() {
           }
         }
         updateProductField(p.id, col.key, val);
-        // Update status cell if stock changed
         if (col.key === 'stock') {
           const cur = loadProducts().find(x => x.id === p.id);
           tr.querySelector('td[data-status="1"]').textContent = computeStatus(cur);

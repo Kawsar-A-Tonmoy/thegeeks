@@ -59,6 +59,7 @@ function displayProducts() {
     form.addEventListener('submit', submitCheckoutOrder);
     document.getElementById('co-payment').addEventListener('change', handlePaymentChange);
     document.getElementById('co-qty').addEventListener('input', updateTotalInModal);
+    document.getElementById('co-address').addEventListener('input', updateDeliveryCharge);
   }
 }
 
@@ -98,6 +99,25 @@ function createProductCard(p) {
   return card;
 }
 
+// ====== DELIVERY CHARGE LOGIC ======
+function calculateDeliveryFee(address) {
+  const lowerAddr = address.toLowerCase();
+  if (lowerAddr.includes("savar")) {
+    return 70;
+  } else if (lowerAddr.includes("dhaka")) {
+    return 100;
+  }
+  return 140;
+}
+
+function updateDeliveryCharge() {
+  const address = document.getElementById('co-address').value.trim();
+  const deliveryFee = calculateDeliveryFee(address);
+  document.getElementById('co-delivery').value = `Delivery Charge = ${deliveryFee}`;
+  document.getElementById('co-delivery').dataset.fee = deliveryFee; // store raw fee
+  updateTotalInModal();
+}
+
 // ====== CHECKOUT MODAL FLOW ======
 function openCheckoutModal(productId) {
   const p = loadProducts().find(x => x.id === productId);
@@ -114,7 +134,6 @@ function openCheckoutModal(productId) {
   document.getElementById('co-unit-price-raw').value = unit.toString();
   document.getElementById('co-available-stock').value = String(p.stock);
   document.getElementById('co-qty').value = 1; // always start at 1
-  document.getElementById('co-delivery').value = DELIVERY_FEE.toString();
   document.getElementById('co-payment').value = '';
   document.getElementById('co-payment-number').value = '';
   document.getElementById('co-txn').value = '';
@@ -123,6 +142,10 @@ function openCheckoutModal(productId) {
   document.getElementById('co-email').value = '';
   document.getElementById('co-address').value = '';
   document.getElementById('co-note').textContent = '';
+
+  // Default delivery fee
+  document.getElementById('co-delivery').value = `Delivery Charge = ${DELIVERY_FEE}`;
+  document.getElementById('co-delivery').dataset.fee = DELIVERY_FEE;
 
   updateTotalInModal();
 
@@ -138,7 +161,8 @@ function closeCheckoutModal() {
 function updateTotalInModal() {
   const qty = Number(document.getElementById('co-qty').value || 1);
   const unit = Number(document.getElementById('co-unit-price-raw').value || 0);
-  const total = unit * qty + DELIVERY_FEE;
+  const deliveryFee = Number(document.getElementById('co-delivery').dataset.fee || DELIVERY_FEE);
+  const total = unit * qty + deliveryFee;
   document.getElementById('co-total').value = total.toFixed(2);
 }
 function handlePaymentChange() {
@@ -172,7 +196,7 @@ async function submitCheckoutOrder(e) {
   const unit = Number(document.getElementById('co-unit-price-raw').value || 0);
   const qty = Number(document.getElementById('co-qty').value || 0);
   const stockAvail = Number(document.getElementById('co-available-stock').value || 0);
-  const delivery = DELIVERY_FEE;
+  const delivery = Number(document.getElementById('co-delivery').dataset.fee || DELIVERY_FEE);
   const total = unit * qty + delivery;
 
   const custName = document.getElementById('co-name').value.trim();
